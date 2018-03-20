@@ -1,8 +1,11 @@
-const express = require('express');
+const Restify = require('restify');
 
-const app = express();
+const app = Restify.createServer();
 
 const token = '123abc';
+
+app.use(Restify.plugins.jsonp());
+app.use(Restify.plugins.bodyParser());
 
 app.get("/", (req, res, next)=> {
 
@@ -12,6 +15,10 @@ app.get("/", (req, res, next)=> {
   else{
     next()
   }
+})
+
+app.post("/", (req, res) => {
+  res.end()
 })
 
 app.listen(8080)
