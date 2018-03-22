@@ -10,7 +10,9 @@
   "author": "James Melling <jmzmelling@gmail.com> (https://github.com/UncleVesimir)",
   "license": "MIT",
   "dependencies": {
+    "dotenv": "^5.0.1",
     "express": "^4.16.3",
+    "request": "^2.85.0",
     "restify": "^6.3.4"
   }
 }
