@@ -5,13 +5,20 @@ const Methods = require("./methods");
 const app = Restify.createServer({
   name: "ReportMilla ChatBot"
 });
+const { Queue } = require("buckets-js");
+const log = require("./winstonLogger")
 
 const token = process.env.VERIFY_TOKEN
 const bot = new Methods(process.env.RM_ACCESS_TOKEN)
 app.use(Restify.plugins.jsonp());
 app.use(Restify.plugins.bodyParser());
 
+const MILLISECOND_IN_A_SECOND = 1000;
 
+const learnMoreMessageArray = require("./learnMoreMessages.json")
+
+
+const master_learnMoreMessagesQueue = createLearnMoreMessagesQueue();
 
 app.get("/", (req, res, next)=> {
 
@@ -25,30 +32,29 @@ app.get("/", (req, res, next)=> {
 
 app.post("/", (req, res) => {
   const response = req.body;
+  
+  res.send(200);
 
   if(response.object === "page"){
+
     const messageObject = bot.getMessageObject(response);
     const nlpObject = bot.getNLPObject(response);
-    console.log(nlpObject)
+
     if(bot.prospectWantsToLearnMore(nlpObject)){
-      bot.sendText(`Thanks for showing interest and giving us your valuable attention! 
-      ReportMilla is a new way to handle your report writing process.
-      
-      Here at ReportMilla we don't believe survey report writing should be the time, money and energy burden it currently is!
-      Imagine you're stood out in the rain. Holding your umbrella between your shoulder and cheek.
-      Taking field notes with pen and paper or dictating to your phone. Water's getting everywhere and you'd rather get back in the car and go back to the office.
-      Only you know when you get back, you'll have to type up those SAME notes you made moments earlier. If you're fortunate enough to have an assistant, take a good look at them next time you ask them to type up your notes. I'm sure they love the idea!
-      
-      And that's the thing! Not only do they know, but you probably think it too. It's a waste of time and resources. Costing your company money and taking away from the excellent service you could be providing to your clients.`, messageObject.id);
-      
-      bot.sendText("follow up", messageObject.id)
+      let learnMoreMessagesQueue = {...master_learnMoreMessagesQueue}
+      sendMultipleMessagesWithDelay(learnMoreMessagesQueue, messageObject.id)
+    }
+    if(bot.prospectHasGivenContactDetails(nlpObject)){
+      bot.logProspectDetails(nlpObject, messageObject.id);
+      // bot.toggleMessageBubble_On(messageObject.id)
+      bot.sendText("Thanks for showing interest in ReportMilla! We'll be in contact soon!", messageObject.id)
     }
     else{
-      bot.sendText(`You said: ${messageObject.message}`, messageObject.id);
+      return
     }
 
   }
-  res.send(200);
+
 })
 
 app.listen(8000, () => {
@@ -56,12 +62,25 @@ app.listen(8000, () => {
 })
 
 
-function sendMultipleMessagesWithDelay(msgArray){
-  // caller function that takes a queue
-  //show front of queue - send this message with the delay it is stored with
-  // dequeue
-  //call recursively with the smaller queue after interval/timeout
-      //may need to wait for confirmation of message send if the order is getting messed up!
-  //may have to restrict queue size
-
+function sendMultipleMessagesWithDelay(msgQueue, userId){
+  if(msgQueue.size() < 1){
+    bot.toggleMessageBubble_Off(userId);
+    return
+  }
+  let messageToSend = msgQueue.dequeue();
+  bot.toggleMessageBubble_Off(userId)
+  bot.sendText(messageToSend.message, userId)
+  setTimeout(bot.toggleMessageBubble_On.bind(bot, userId), 2 * MILLISECOND_IN_A_SECOND);
+  setTimeout(sendMultipleMessagesWithDelay.bind(bot, msgQueue, userId), messageToSend.delayNext * MILLISECOND_IN_A_SECOND)
+  return;
 }
+
+function createLearnMoreMessagesQueue(){
+  const learnMoreMessageQueue = Queue();
+  const delayArray = [12,16,15,12,18,10,7,5];
+  learnMoreMessageArray.forEach((message, i) => {
+    learnMoreMessageQueue.add({message, delayNext: delayArray[i]})
+  })
+  return learnMoreMessageQueue;
+}
+

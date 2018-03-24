@@ -10,9 +10,11 @@
   "author": "James Melling <jmzmelling@gmail.com> (https://github.com/UncleVesimir)",
   "license": "MIT",
   "dependencies": {
+    "buckets-js": "^1.98.2",
     "dotenv": "^5.0.1",
     "express": "^4.16.3",
     "request": "^2.85.0",
-    "restify": "^6.3.4"
+    "restify": "^6.3.4",
+    "winston": "^3.0.0-rc3"
   }
 }
